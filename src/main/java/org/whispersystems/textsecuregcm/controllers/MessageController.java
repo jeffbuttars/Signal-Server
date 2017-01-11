@@ -52,6 +52,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
@@ -98,17 +100,26 @@ public class MessageController {
   @Produces(MediaType.APPLICATION_JSON)
   public SendMessageResponse sendMessage(@Auth                     Account source,
                                          @PathParam("destination") String destinationName,
-                                         @Valid                    IncomingMessageList messages)
+                                         @Valid                    IncomingMessageList messages,
+                                         @HeaderParam("Forsta-OOB-Sink") @DefaultValue("") String oobSink)
       throws IOException, RateLimitExceededException
   {
     rateLimiters.getMessagesLimiter().validate(source.getNumber() + "__" + destinationName);
+    logger.debug("sendMessage destination: " + destinationName + ", source: " + source);
 
     try {
       boolean isSyncMessage = source.getNumber().equals(destinationName);
+        logger.debug("sendMessage isSyncMessage: " + isSyncMessage);
 
-      if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage);
-      else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage);
+      if (Util.isEmpty(messages.getRelay())) {
+          logger.debug("sendMessage sendLocalMessage");
+          sendLocalMessage(source, destinationName, messages, isSyncMessage, oobSink);
+      } else {
+          logger.debug("sendRelayMessage sendLocalMessage");
+          sendRelayMessage(source, destinationName, messages, isSyncMessage);
+      }
 
+      logger.debug("sendRelayMessage SendMessageResponse: " + (!isSyncMessage && source.getActiveDeviceCount() > 1));
       return new SendMessageResponse(!isSyncMessage && source.getActiveDeviceCount() > 1);
     } catch (NoSuchUserException e) {
       throw new WebApplicationException(Response.status(404).build());
@@ -168,9 +179,11 @@ public class MessageController {
   private void sendLocalMessage(Account source,
                                 String destinationName,
                                 IncomingMessageList messages,
-                                boolean isSyncMessage)
+                                boolean isSyncMessage,
+                                String oobSink)
       throws NoSuchUserException, MismatchedDevicesException, StaleDevicesException
   {
+    logger.debug("sendLocalMessage0");
     Account destination;
 
     if (!isSyncMessage) destination = getDestinationAccount(destinationName);
@@ -185,6 +198,11 @@ public class MessageController {
       if (destinationDevice.isPresent()) {
         sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage);
       }
+
+      // XXX if destination is OOB Sink device; AKA Superman
+      if (oobSink.equals("sm")) {
+        logger.debug("sendLocalMessage0 SEND TO SUPERMAN!!!");
+      }
     }
   }
 
@@ -195,6 +213,7 @@ public class MessageController {
                                 IncomingMessage incomingMessage)
       throws NoSuchUserException
   {
+    logger.debug("sendLocalMessage single message");
     try {
       Optional<byte[]> messageBody    = getMessageBody(incomingMessage);
       Optional<byte[]> messageContent = getMessageContent(incomingMessage);
