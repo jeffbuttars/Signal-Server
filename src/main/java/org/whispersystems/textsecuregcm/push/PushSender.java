@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.entities.ApnMessage;
 import org.whispersystems.textsecuregcm.entities.GcmMessage;
+import org.whispersystems.textsecuregcm.entities.CcsmMessage;
 import org.whispersystems.textsecuregcm.push.ApnFallbackManager.ApnFallbackTask;
 import org.whispersystems.textsecuregcm.push.WebsocketSender.DeliveryStatus;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -71,7 +72,13 @@ public class PushSender implements Managed {
   public void sendMessage(final Account account, final Device device, final Envelope message)
       throws NotPushRegisteredException
   {
-    if (device.getGcmId() == null && device.getApnId() == null && !device.getFetchesMessages()) {
+      logger.debug("sendMessage account " + account);
+      logger.debug("sendMessage device " + device);
+
+    if (device.getGcmId() == null &&
+            device.getApnId() == null &&
+            device.getCcsmId() == null &&
+            !device.getFetchesMessages()) {
       throw new NotPushRegisteredException("No delivery possible!");
     }
 
@@ -100,13 +107,19 @@ public class PushSender implements Managed {
   }
 
   private void sendSynchronousMessage(Account account, Device device, Envelope message) {
+    logger.debug("sendSynchronousMessage account " + account);
+    logger.debug("sendSynchronousMessage device " + device);
+    logger.debug("sendSynchronousMessage device.getCcsmId() " + device.getCcsmId());
+
     if      (device.getGcmId() != null)   sendGcmMessage(account, device, message);
     else if (device.getApnId() != null)   sendApnMessage(account, device, message);
+    else if (device.getCcsmId() != null)  sendCcsmMessage(account, device, message);
     else if (device.getFetchesMessages()) sendWebSocketMessage(account, device, message);
     else                                  throw new AssertionError();
   }
 
   private void sendGcmMessage(Account account, Device device, Envelope message) {
+    logger.debug("sendGcmMessage");
     DeliveryStatus deliveryStatus = webSocketSender.sendMessage(account, device, message, WebsocketSender.Type.GCM);
 
     if (!deliveryStatus.isDelivered()) {
@@ -115,6 +128,7 @@ public class PushSender implements Managed {
   }
 
   private void sendGcmNotification(Account account, Device device) {
+    logger.debug("sendGcmNotification");
     try {
       GcmMessage gcmMessage = new GcmMessage(device.getGcmId(), account.getNumber(),
                                              (int)device.getId(), "", false, true);
@@ -125,7 +139,20 @@ public class PushSender implements Managed {
     }
   }
 
+  private void sendCcsmMessage(Account account, Device device, Envelope message) {
+    logger.debug("sendCcsmMessage");
+    try {
+      CcsmMessage ccsmMessage = new CcsmMessage(device.getCcsmId(), account.getNumber(),
+                                             (int)device.getId(), "", false, true);
+
+      pushServiceClient.send(ccsmMessage);
+    } catch (TransientPushFailureException e) {
+      logger.warn("SILENT PUSH LOSS", e);
+    }
+  }
+
   private void sendApnMessage(Account account, Device device, Envelope outgoingMessage) {
+    logger.debug("sendApnMessage");
     DeliveryStatus deliveryStatus = webSocketSender.sendMessage(account, device, outgoingMessage, WebsocketSender.Type.APN);
 
     if (!deliveryStatus.isDelivered() && outgoingMessage.getType() != Envelope.Type.RECEIPT) {
@@ -135,6 +162,7 @@ public class PushSender implements Managed {
   }
 
   private void sendApnNotification(Account account, Device device, int messageQueueDepth, boolean fallback) {
+    logger.debug("sendApnNotification");
     ApnMessage apnMessage;
 
     if (!Util.isEmpty(device.getVoipApnId())) {
@@ -161,6 +189,7 @@ public class PushSender implements Managed {
 
   private void sendWebSocketMessage(Account account, Device device, Envelope outgoingMessage)
   {
+    logger.debug("sendWebSocketMessage");
     webSocketSender.sendMessage(account, device, outgoingMessage, WebsocketSender.Type.WEB);
   }
 

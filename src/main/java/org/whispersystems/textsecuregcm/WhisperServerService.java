@@ -116,6 +116,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     Security.addProvider(new BouncyCastleProvider());
   }
 
+
   @Override
   public void initialize(Bootstrap<WhisperServerConfiguration> bootstrap) {
     bootstrap.addCommand(new DirectoryCommand());

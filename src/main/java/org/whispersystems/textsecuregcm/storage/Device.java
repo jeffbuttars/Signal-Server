@@ -50,6 +50,9 @@ public class Device {
   private String  apnId;
 
   @JsonProperty
+  private String  ccsmId;
+
+  @JsonProperty
   private String  voipApnId;
 
   @JsonProperty
@@ -79,7 +82,7 @@ public class Device {
   public Device() {}
 
   public Device(long id, String name, String authToken, String salt,
-                String signalingKey, String gcmId, String apnId,
+                String signalingKey, String gcmId, String apnId, String ccsmId,
                 String voipApnId, boolean fetchesMessages,
                 int registrationId, SignedPreKey signedPreKey,
                 long lastSeen, long created, boolean voice,
@@ -92,6 +95,7 @@ public class Device {
     this.signalingKey    = signalingKey;
     this.gcmId           = gcmId;
     this.apnId           = apnId;
+    this.ccsmId          = ccsmId;
     this.voipApnId       = voipApnId;
     this.fetchesMessages = fetchesMessages;
     this.registrationId  = registrationId;
@@ -104,6 +108,18 @@ public class Device {
 
   public String getApnId() {
     return apnId;
+  }
+
+  public String getCcsmId() {
+    return ccsmId;
+  }
+
+  public void setCcsmId(String ccsmId) {
+    this.ccsmId = ccsmId;
+
+    if (ccsmId != null) {
+      this.pushTimestamp = System.currentTimeMillis();
+    }
   }
 
   public void setApnId(String apnId) {

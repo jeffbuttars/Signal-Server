@@ -100,15 +100,15 @@ public class AccountsManager {
   }
 
   private void updateDirectory(Account account) {
-    logger.debug("updateDirectory account: " + account)
+    // logger.debug("updateDirectory account: " + account);
     if (account.isActive()) {
-      logger.debug("updateDirectory account is active ")
+      // logger.debug("updateDirectory account is active");
       byte[]        token         = Util.getContactToken(account.getNumber());
       ClientContact clientContact = new ClientContact(token, null, account.isVoiceSupported());
       directory.add(clientContact);
     } else {
-      logger.debug("updateDirectory account is inactive!!!")
-      logger.debug("updateDirectory removing account with number: " + account.getNumber()
+      // logger.debug("updateDirectory account is inactive!!!");
+      // logger.debug("updateDirectory removing account with number: " + account.getNumber());
       directory.remove(account.getNumber());
     }
   }

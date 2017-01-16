@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.configuration.PushConfiguration;
 import org.whispersystems.textsecuregcm.entities.ApnMessage;
 import org.whispersystems.textsecuregcm.entities.GcmMessage;
+import org.whispersystems.textsecuregcm.entities.CcsmMessage;
 import org.whispersystems.textsecuregcm.entities.UnregisteredEvent;
 import org.whispersystems.textsecuregcm.entities.UnregisteredEventList;
 import org.whispersystems.textsecuregcm.util.Base64;
@@ -21,6 +22,7 @@ public class PushServiceClient {
 
   private static final String PUSH_GCM_PATH     = "/api/v1/push/gcm";
   private static final String PUSH_APN_PATH     = "/api/v1/push/apn";
+  private static final String PUSH_CCSM_PATH     = "/v1/message";
 
   private static final String APN_FEEDBACK_PATH = "/api/v1/feedback/apn";
   private static final String GCM_FEEDBACK_PATH = "/api/v1/feedback/gcm";
@@ -30,12 +32,18 @@ public class PushServiceClient {
   private final Client client;
   private final String host;
   private final int    port;
+  private final String ccsmHost;
+  private final int    ccsmPort;
+  private final String ccsmPath;
   private final String authorization;
 
   public PushServiceClient(Client client, PushConfiguration config) {
     this.client        = client;
     this.host          = config.getHost();
     this.port          = config.getPort();
+    this.ccsmHost      = config.getCcsmHost();
+    this.ccsmPort      = config.getCcsmPort();
+    this.ccsmPath      = config.getCcsmPath();
     this.authorization = getAuthorizationHeader(config.getUsername(), config.getPassword());
   }
 
@@ -45,6 +53,26 @@ public class PushServiceClient {
 
   public void send(ApnMessage message) throws TransientPushFailureException {
     sendPush(PUSH_APN_PATH, message);
+  }
+
+  public void send(CcsmMessage message) throws TransientPushFailureException {
+    logger.debug("send CCSM message");
+    // ??? Send straight to CCSM. Maybe send through push server?
+    try {
+      Response response = client.target("https://" + ccsmHost + ":" + ccsmPort)
+                                .path(ccsmPath)
+                                .request()
+                                .header("Authorization", authorization)
+                                .put(Entity.entity(message, MediaType.APPLICATION_JSON_TYPE));
+
+      if (response.getStatus() != 204 && response.getStatus() != 200) {
+        logger.warn("PushServer response: " + response.getStatus() + " " + response.getStatusInfo().getReasonPhrase());
+        throw new TransientPushFailureException("Bad response: " + response.getStatus());
+      }
+    } catch (ProcessingException e) {
+      logger.warn("Push error: ", e);
+      throw new TransientPushFailureException(e);
+    }
   }
 
   public List<UnregisteredEvent> getGcmFeedback() throws IOException {

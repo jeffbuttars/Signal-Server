@@ -34,6 +34,7 @@ import org.whispersystems.textsecuregcm.auth.TurnTokenGenerator;
 import org.whispersystems.textsecuregcm.entities.AccountAttributes;
 import org.whispersystems.textsecuregcm.entities.ApnRegistrationId;
 import org.whispersystems.textsecuregcm.entities.GcmRegistrationId;
+import org.whispersystems.textsecuregcm.entities.CcsmRegistrationId;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
 import org.whispersystems.textsecuregcm.providers.TimeProvider;
 import org.whispersystems.textsecuregcm.sms.SmsSender;
@@ -244,6 +245,42 @@ public class AccountController {
     return turnTokenGenerator.generate();
   }
 
+  /**
+   * Allow a device to register itself as a CCSM device.
+   */
+  @Timed
+  @PUT
+  @Path("/ccsm/")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public void setCcsmRegistrationId(@Auth Account account, @Valid CcsmRegistrationId registrationId) {
+    logger.debug("setCcsmRegistrationId account: " + account);
+    logger.debug("setCcsmRegistrationId registrationId: " + registrationId);
+    logger.debug("setCcsmRegistrationId account.getAuthenticatedDevice(): " + account.getAuthenticatedDevice());
+    Device device = account.getAuthenticatedDevice().get();
+    logger.debug("setCcsmRegistrationId device: " + device);
+    device.setApnId(null);
+    device.setVoipApnId(null);
+    device.setGcmId(null);
+    device.setCcsmId(registrationId.getCcsmRegistrationId());
+
+    if (registrationId.isWebSocketChannel()) device.setFetchesMessages(true);
+    else                                     device.setFetchesMessages(false);
+
+
+    logger.debug("setCcsmRegistrationId updating account");
+    accounts.update(account);
+  }
+
+  @Timed
+  @DELETE
+  @Path("/ccsm/")
+  public void deleteCcsmRegistrationId(@Auth Account account) {
+    Device device = account.getAuthenticatedDevice().get();
+    device.setCcsmId(null);
+    device.setFetchesMessages(false);
+    accounts.update(account);
+  }
+
   @Timed
   @PUT
   @Path("/gcm/")
@@ -259,6 +296,7 @@ public class AccountController {
 
     accounts.update(account);
   }
+
 
   @Timed
   @DELETE

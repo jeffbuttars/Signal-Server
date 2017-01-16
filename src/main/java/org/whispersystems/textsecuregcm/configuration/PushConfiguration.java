@@ -26,6 +26,22 @@ public class PushConfiguration {
   @Min(0)
   private int queueSize = 200;
 
+  @JsonProperty
+  @NotEmpty
+  private String ccsmHost;
+
+  @JsonProperty
+  @NotEmpty
+  private String ccsmPath;
+
+  @JsonProperty
+  @NotEmpty
+  private String ccsmToken;
+
+  @JsonProperty
+  @Min(1)
+  private int ccsmPort;
+
   public String getHost() {
     return host;
   }
@@ -42,7 +58,23 @@ public class PushConfiguration {
     return password;
   }
 
+  public String getCcsmHost() {
+    return ccsmHost;
+  }
+
+  public int getCcsmPort() {
+      return ccsmPort;
+  }
+
   public int getQueueSize() {
     return queueSize;
+  }
+
+  public String getCcsmPath() {
+      return ccsmPath;
+  }
+
+  public String getCcsmToken() {
+      return ccsmToken;
   }
 }
