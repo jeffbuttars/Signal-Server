@@ -65,6 +65,7 @@ public class AccountsManager {
   }
 
   public boolean create(Account account) {
+    logger.debug("get create: " + account);
     boolean freshUser = accounts.create(account);
     memcacheSet(account.getNumber(), account);
     updateDirectory(account);
@@ -73,12 +74,14 @@ public class AccountsManager {
   }
 
   public void update(Account account) {
+    logger.debug("get update: " + account);
     memcacheSet(account.getNumber(), account);
     accounts.update(account);
     updateDirectory(account);
   }
 
   public Optional<Account> get(String number) {
+    logger.debug("get number: " + number);
     Optional<Account> account = memcacheGet(number);
 
     if (!account.isPresent()) {
@@ -100,15 +103,15 @@ public class AccountsManager {
   }
 
   private void updateDirectory(Account account) {
-    // logger.debug("updateDirectory account: " + account);
+    logger.debug("updateDirectory account: " + account);
     if (account.isActive()) {
-      // logger.debug("updateDirectory account is active");
+      logger.debug("updateDirectory account is active");
       byte[]        token         = Util.getContactToken(account.getNumber());
       ClientContact clientContact = new ClientContact(token, null, account.isVoiceSupported());
       directory.add(clientContact);
     } else {
-      // logger.debug("updateDirectory account is inactive!!!");
-      // logger.debug("updateDirectory removing account with number: " + account.getNumber());
+      logger.debug("updateDirectory account is inactive!!!");
+      logger.debug("updateDirectory removing account with number: " + account.getNumber());
       directory.remove(account.getNumber());
     }
   }
