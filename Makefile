@@ -26,7 +26,7 @@ status:
 start: $(TARGET)
 	(java -jar $(TARGET) server \
 		config/signalserver.yml > signalserver.log) & echo $$! > $(PID_FILE)
-	echo "Started Signal Server $$(cat signalserver.pid)"; sleep 2; \
+	echo "Started Signal Server $$(cat signalserver.pid)"; sleep 4; \
 	$(MAKE) status
 
 stop:
